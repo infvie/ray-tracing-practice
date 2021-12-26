@@ -1,25 +1,19 @@
 #include <iostream>
 #include <fstream>
 
-#include "vec3.h"
+#include "utils.h"
 #include "color.h"
-#include "ray.h"
+#include "hittable_list.h"
+#include "sphere.h"
 
-bool hit_sphere(const point3& center, double radius, const ray& r) {
-    vec3 oc = r.origin() - center;
-    auto a = dot(r.direction(), r.direction());
-    auto b = 2.0 * dot(oc, r.direction());
-    auto c = dot(oc,oc) - radius*radius;
-    auto discriminant = b*b - 4*a*c;
-    return (discriminant > 0);
-}
-
-color ray_color(const ray& r) {
-    if (hit_sphere(point3(0,0,-1), .5, r))
-        return {1.0,0,0};
-    vec3 unit_dir = unit_vector(r.dir);
-    auto t = 0.5*(unit_dir.y()+1);
-    return (1.0-t)*color(1.0, 1.0, 1.0) + t*color(0.5, 0.7, 1);
+color ray_color(const ray& r, const hittable& world) {
+    hit_record rec;
+    if (world.hit(r, 0, infinity, rec)) {
+        return 0.5 * (rec.normal + color(1,1,1));
+    }
+    vec3 unit_direction = unit_vector(r.direction());
+    auto t = 0.5*(unit_direction.y() + 1.0);
+    return (1.0-t)*color(1.0, 1.0, 1.0) + t*color(0.5, 0.7, 1.0);
 }
 
 
@@ -30,8 +24,13 @@ int main() {
 
     // Image
     const auto aspect_ratio = 16.0/9.0;
-    const int width = 400;
+    const int width = 1080;
     const int height = static_cast<int>(width/aspect_ratio);
+
+    // World
+    hittable_list world;
+    world.add(make_shared<sphere>(point3(0,0,-1), 0.5));
+    world.add(make_shared<sphere>(point3(0,-100.5,-1), 100));
 
     // Camera
     auto viewport_height = 2.0;
@@ -47,13 +46,13 @@ int main() {
 
     img_file << "P3\n" << width << ' ' << height << "\n255\n";
 
-    for (int j = 0; j <= height; j++) {
-        std::cerr << "\rScan Lines remaining: " << (height-j) << ' ' << std::flush;
-        for (int i = 0; i < width; i++) {
+    for (int j = 0; j < height; j++) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < width; ++i) {
             auto u = double(i) / (width-1);
             auto v = double(height-j) / (height-1);
-            ray r(origin, lower_left_corner + u*horizontal + v*vertical - origin);
-            color pixel_color = ray_color(r);
+            ray r(origin, lower_left_corner + u*horizontal + v*vertical);
+            color pixel_color = ray_color(r, world);
             write_color(img_file, pixel_color);
         }
     }
