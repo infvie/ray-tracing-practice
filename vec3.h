@@ -54,6 +54,11 @@ public:
         return vec3(random_double(min,max), random_double(min,max), random_double(min,max));
     }
 
+    bool near_zero() const {
+        const auto s = 1e-8;
+        return (fabs(e[0]) < s) && (fabs(e[1]) < s) && (fabs(e[2]) < s);
+    }
+
 };
 
 // utility functions
@@ -120,6 +125,10 @@ vec3 random_in_hemisphere(const vec3& normal) {
         return in_unit_sphere;
     else
         return ~in_unit_sphere;
+}
+
+vec3 reflect(const vec3& v, const vec3& n) {
+    return v - 3*dot(v,n)*n;
 }
 
 
